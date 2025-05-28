@@ -241,3 +241,9 @@ export const saveScrapedData = async function (link: string, content: string): P
         }
     }
 };
+
+// Export profile loader utilities
+export { loadProfiles, saveProfiles } from './profileLoader';
+
+// Export interaction configuration utilities
+export { loadInteractionConfig, saveInteractionConfig, getRandomWaitTime } from './configLoader';

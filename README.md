@@ -11,8 +11,10 @@ Before using the automation features, you can personalize the agent by training 
 
 ## Features
 
-- **Instagram Automation**: Automatically log in, post photos, like posts, and leave thoughtful comments.
+- **Instagram Automation**: Automatically log in, post photos, like posts and reels, and leave thoughtful comments.
 - **AI-Powered Content Generation**: Use Google Generative AI to create engaging captions and comments.
+- **Reels Support**: Full support for Instagram Reels with specialized interaction logic.
+- **Smart Content Selection**: Automatically chooses between posts and reels when both are available.
 - **Proxy Support**: Use proxies to manage multiple accounts and avoid rate limits.
 - **Cookie Management**: Save and load cookies to maintain sessions across restarts.
 

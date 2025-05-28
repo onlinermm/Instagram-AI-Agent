@@ -1,0 +1,16 @@
+{
+  "features": {
+    "liking": true,
+    "commenting": false
+  },
+  "settings": {
+    "waitBetweenActions": {
+      "min": 5000,
+      "max": 15000
+    },
+    "waitBetweenProfiles": {
+      "min": 15000,
+      "max": 25000
+    }
+  }
+} 
