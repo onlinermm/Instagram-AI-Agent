@@ -1,0 +1,11 @@
+{
+  "test": "data",
+  "timestamp": "2025-05-28T10:17:00.000Z",
+  "profileUrl": "https://www.instagram.com/test/",
+  "username": "test",
+  "filename": "profile_test_2025-05-28T10-17-00-000Z.jpg",
+  "image": {
+    "type": "image/jpeg"
+  },
+  "message": "Testing webhook functionality with JPG format"
+} 

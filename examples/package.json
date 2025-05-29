@@ -1,0 +1,24 @@
+{
+  "name": "instagram-ai-agent-webhook-example",
+  "version": "1.0.0",
+  "description": "Example webhook server for receiving Instagram profile screenshots",
+  "main": "webhook-server.js",
+  "scripts": {
+    "start": "node webhook-server.js",
+    "dev": "nodemon webhook-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "webhook",
+    "instagram",
+    "screenshots",
+    "express"
+  ],
+  "author": "Instagram AI Agent",
+  "license": "MIT"
+} 

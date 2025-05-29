@@ -60,6 +60,85 @@ export const getInstagramCommentSchema = (): InstagramCommentSchema => {
     };
 };
 
+export interface RealEstateRelevanceSchema {
+    description: string;
+    type: SchemaType;
+    items: {
+        type: SchemaType;
+        properties: {
+            isRelevant: {
+                type: SchemaType;
+                description: string;
+                nullable: boolean;
+            };
+            relevanceScore: {
+                type: SchemaType;
+                description: string;
+                nullable: boolean;
+            };
+            detectedKeywords: {
+                type: SchemaType;
+                description: string;
+                nullable: boolean;
+            };
+            category: {
+                type: SchemaType;
+                description: string;
+                nullable: boolean;
+            };
+            reason: {
+                type: SchemaType;
+                description: string;
+                nullable: boolean;
+            };
+        };
+        required: string[];
+    };
+}
+
+export const getRealEstateRelevanceSchema = (): RealEstateRelevanceSchema => {
+    return {
+        description: `Analyzes Instagram post content to determine if it's relevant to real estate business and worth engaging with.`,
+        type: SchemaType.ARRAY,
+        items: {
+            type: SchemaType.OBJECT,
+            properties: {
+                isRelevant: {
+                    type: SchemaType.BOOLEAN,
+                    description: "Whether the post is relevant to real estate business (true/false).",
+                    nullable: false,
+                },
+                relevanceScore: {
+                    type: SchemaType.NUMBER,
+                    description: "Relevance score from 0 to 100, where 100 is highly relevant to real estate.",
+                    nullable: false,
+                },
+                detectedKeywords: {
+                    type: SchemaType.STRING,
+                    description: "Comma-separated list of real estate keywords found in the content.",
+                    nullable: true,
+                },
+                category: {
+                    type: SchemaType.STRING,
+                    description: "Real estate category: 'residential', 'commercial', 'investment', 'rental', 'construction', 'renovation', 'market_analysis', 'other' or 'not_relevant'.",
+                    nullable: false,
+                },
+                reason: {
+                    type: SchemaType.STRING,
+                    description: "Brief explanation of why the content is or isn't relevant to real estate.",
+                    nullable: false,
+                },
+            },
+            required: [
+                "isRelevant",
+                "relevanceScore", 
+                "category",
+                "reason"
+            ],
+        },
+    };
+};
+
 
 
 // Define the interface for the Tweet document

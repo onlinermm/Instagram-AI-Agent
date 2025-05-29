@@ -9,7 +9,10 @@
     "train:link": "tsc && node build/Agent/training/WebsiteScraping.js",
     "train:audio": "tsc && node build/Agent/training/TrainWithAudio.js",
     "toggle-features": "tsc && node build/scripts/toggleFeatures.js",
-    "status": "npm run toggle-features -- --status"
+    "status": "npm run toggle-features -- --status",
+    "test:content-filter": "npx ts-node src/test/contentFilterTest.ts",
+    "test:image-analysis": "npx ts-node src/test/imageAnalysisTest.ts",
+    "test:caption-extraction": "npx ts-node src/test/captionExtractionTest.ts"
   },
   "keywords": [],
   "author": "",

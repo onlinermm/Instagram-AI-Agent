@@ -7,7 +7,7 @@ import fs from "fs";
 import path from "path";
 import * as readlineSync from "readline-sync";
 
-export async function runAgent(schema: InstagramCommentSchema, prompt: string): Promise<any> {
+export async function runAgent(schema: any, prompt: string): Promise<any> {
     let currentApiKeyIndex = 0;  
     let geminiApiKey = geminiApiKeys[currentApiKeyIndex];
 

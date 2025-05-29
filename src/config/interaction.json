@@ -1,7 +1,9 @@
 {
   "features": {
     "liking": true,
-    "commenting": false
+    "commenting": true,
+    "screenshots": false,
+    "contentFiltering": true
   },
   "settings": {
     "waitBetweenActions": {
@@ -12,5 +14,38 @@
       "min": 15000,
       "max": 25000
     }
+  },
+  "contentFilter": {
+    "minRelevanceScore": 70,
+    "allowedCategories": [
+      "residential",
+      "commercial",
+      "investment",
+      "rental",
+      "construction",
+      "renovation",
+      "market_analysis"
+    ],
+    "requiredKeywords": [],
+    "excludeKeywords": [
+      "family",
+      "vacation",
+      "food",
+      "entertainment",
+      "personal",
+      "hobby",
+      "travel",
+      "fashion",
+      "beauty",
+      "sports",
+      "gaming",
+      "music",
+      "party",
+      "celebration"
+    ]
+  },
+  "webhook": {
+    "url": "https://mm90t4ucv092c7xlv01phwzrrqmbkdqd.3dapartment.com/webhook/3186e8ae-2470-4736-8827-679f3a3aae3e",
+    "timeout": 10000
   }
-} 
+}
