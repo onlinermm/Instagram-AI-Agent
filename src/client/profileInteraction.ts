@@ -209,8 +209,8 @@ async function findBestRelevantContent(page: Page, config: any): Promise<{elemen
         let finalCategory = textAnalysis.category;
 
         if (imageAnalysis && imageAnalysis.score > 0) {
-          // Weighted average: 60% text, 40% image
-          finalScore = Math.round((textAnalysis.score * 0.6) + (imageAnalysis.score * 0.4));
+          // Weighted average: 75% text, 25% image
+          finalScore = Math.round((textAnalysis.score * 0.75) + (imageAnalysis.score * 0.25));
           finalReason = `Text: ${textAnalysis.reason} | Image: ${imageAnalysis.reason}`;
           finalCategory = imageAnalysis.score > textAnalysis.score ? imageAnalysis.category : textAnalysis.category;
           
