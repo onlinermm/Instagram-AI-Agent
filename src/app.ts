@@ -27,6 +27,26 @@ app.use(express.json()); // JSON body parsing
 app.use(express.urlencoded({ extended: true, limit: '1kb' })); // URL-encoded data
 app.use(cookieParser()); // Cookie parsing
 
+// Import controllers dynamically to avoid type issues
+const setupRoutes = () => {
+    const { handleWebhook, getStatus } = require('./controllers/webhookController');
+    
+    app.post('/webhook', handleWebhook);
+    app.get('/status', getStatus);
+    
+    // Health check endpoint
+    app.get('/health', (_req: any, res: any) => {
+        return res.json({ 
+            status: 'ok', 
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime()
+        });
+    });
+};
+
+setupRoutes();
+
+// Функція для циклічного запуску агентів (тільки для режиму --profiles)
 const runAgents = async () => {
     while (true) {
         logger.info("Starting Instagram agent iteration...");
@@ -46,8 +66,7 @@ const runAgents = async () => {
     }
 };
 
-runAgents().catch(error => {
-    setup_HandleError(error , "Error running agents:");
-});
+// Експортуємо функцію для використання в index.ts
+export { runAgents };
 
 export default app;

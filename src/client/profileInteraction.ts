@@ -4,6 +4,7 @@ import { runAgent } from '../Agent';
 import { getInstagramCommentSchema } from '../Agent/schema';
 import { loadInteractionConfig, getRandomWaitTime, analyzeContentRelevance, analyzeImageRelevance } from '../utils/configLoader';
 import { takeProfileScreenshot, sendScreenshotWebhook, cleanupOldScreenshots } from '../utils/screenshotUtils';
+import { InteractionResult } from '../types/webhookTypes';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -288,11 +289,18 @@ async function findBestRelevantContent(page: Page, config: any): Promise<{elemen
   }
 }
 
-export async function interactWithProfile(page: Page, profileUrl: string): Promise<boolean> {
+export async function interactWithProfile(page: Page, profileUrl: string, config: any): Promise<InteractionResult> {
+  // Initialize result object
+  const result: InteractionResult = {
+    profileUrl,
+    success: false,
+    message: '',
+    liked: false,
+    commented: false,
+    isReel: false
+  };
+
   try {
-    // Load interaction configuration
-    const config = loadInteractionConfig();
-    
     // Better visual separation for profile start
     logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     logger.info(`🎯 STARTING PROFILE INTERACTION`);
@@ -310,7 +318,8 @@ export async function interactWithProfile(page: Page, profileUrl: string): Promi
     const profileExists = await page.$('main');
     if (!profileExists) {
       logger.warn(`❌ Profile not accessible: ${profileUrl}`);
-      return false;
+      result.message = 'Profile not accessible';
+      return result;
     }
 
     // Check if profile is private using page.evaluate
@@ -328,7 +337,8 @@ export async function interactWithProfile(page: Page, profileUrl: string): Promi
     
     if (isPrivate) {
       logger.warn(`🔒 Profile is private, skipping: ${profileUrl}`);
-      return false;
+      result.message = 'Profile is private';
+      return result;
     }
 
     // Take screenshot of the profile if enabled
@@ -356,11 +366,14 @@ export async function interactWithProfile(page: Page, profileUrl: string): Promi
       logger.warn('└─────────────────────────────────────────────────────────────────────────────────┘');
       logger.warn(`No relevant posts found on profile: ${profileUrl}`);
       logger.info(`🚫 Skipping profile due to lack of relevant content`);
-      return false;
+      result.message = 'No relevant content found';
+      return result;
     }
 
     // Use the found relevant content
     const { element, isReel, href, relevanceScore, reason } = contentResult;
+    result.isReel = isReel;
+    result.postUrl = href;
     
     logger.info('🎯 ┌─────────────────────────────────────────────────────────────────────────────────┐');
     logger.info('🎯 │                        ✅ BEST POST SELECTED FOR INTERACTION                   │');
@@ -420,7 +433,8 @@ export async function interactWithProfile(page: Page, profileUrl: string): Promi
     if (!modalLoaded) {
       await debugPageState(page, 'modal_not_loaded');
       logger.warn(`${isReel ? 'Reel' : 'Post'} modal did not load for ${profileUrl}`);
-      return false;
+      result.message = 'Post modal did not load';
+      return result;
     }
 
     // For reels, wait a bit more for the interface to stabilize
@@ -453,7 +467,6 @@ export async function interactWithProfile(page: Page, profileUrl: string): Promi
       logger.info('│                               ❤️  LIKING SECTION                               │');
       logger.info('└─────────────────────────────────────────────────────────────────────────────────┘');
       
-      let liked = false;
       logger.info('Attempting to like the content...');
       
       // Wait for like button with more reliable selector
@@ -490,58 +503,69 @@ export async function interactWithProfile(page: Page, profileUrl: string): Promi
 
         if (likeResult === 'liked') {
           logger.info(`✅ ${isReel ? 'Reel' : 'Post'} successfully liked!`);
+          result.liked = true;
           await delay(getRandomWaitTime(config.settings.waitBetweenActions.min, config.settings.waitBetweenActions.max));
-          liked = true;
         } else if (likeResult === 'already_liked') {
-          logger.info(`ℹ️ ${isReel ? 'Reel' : 'Post'} already liked on ${profileUrl}`);
-          liked = true;
+          logger.info(`ℹ️ ${isReel ? 'Reel' : 'Post'} was already liked before`);
+          result.liked = false; // We didn't perform the like action
         } else {
-          logger.warn(`⚠️ Like button not found on ${profileUrl} for ${isReel ? 'reel' : 'post'}`);
+          logger.warn(`⚠️ Like button not found for ${isReel ? 'reel' : 'post'} on ${profileUrl}`);
+          result.liked = false;
         }
-        
       } catch (error) {
-        logger.warn(`❌ Error waiting for like button on ${profileUrl}:`, error);
+        logger.warn(`❌ Error trying to like ${isReel ? 'reel' : 'post'} on ${profileUrl}:`, error);
+        result.liked = false;
       }
     } else {
       logger.info('⏭️ Liking is disabled in configuration, skipping like action');
+      result.liked = false;
     }
 
-    // Generate and log potential comment (for testing purposes)
-    logger.info('┌─────────────────────────────────────────────────────────────────────────────────┐');
-    logger.info('│                              🧪 COMMENT GENERATION TEST                        │');
-    logger.info('└─────────────────────────────────────────────────────────────────────────────────┘');
-    
+    // Generate comment using AI
     let generatedComment = '';
     try {
-      logger.info(`🤖 Generating potential AI comment for ${isReel ? 'reel' : 'post'}...`);
+      logger.info('┌─────────────────────────────────────────────────────────────────────────────────┐');
+      logger.info('│                            🤖 AI COMMENT GENERATION                            │');
+      logger.info('└─────────────────────────────────────────────────────────────────────────────────┘');
+      logger.info(`🤖 Generating AI comment for ${isReel ? 'reel' : 'post'} on ${profileUrl}...`);
       
-      const prompt = `Craft a thoughtful, engaging, and mature reply to the following Instagram ${isReel ? 'reel' : 'post'}: "${caption}". 
-      Ensure the reply is relevant, insightful, and adds value to the conversation. 
-      It should reflect empathy and professionalism, and avoid sounding too casual or superficial. 
-      The comment should be 300 characters or less and should not go against Instagram Community Standards on spam. 
-      Make it sound natural and human-like. ${isReel ? 'Since this is a reel (video content), consider commenting on the visual content, creativity, or message conveyed.' : ''}
-      
-      IMPORTANT RULES:
-      - NEVER include hashtags (#) in the comment
-      - Do not use any hashtags whatsoever
-      - Focus on genuine conversation, not promotional content
-      - Write as a real person would comment, not as a marketer`;
-      
-      const schema = getInstagramCommentSchema();
-      const result = await runAgent(schema, prompt);
-      generatedComment = result[0]?.comment || (isReel ? 'Great reel! 🎬' : 'Great post! 👍');
-      
-      // Validate and clean hashtags (important security measure)
+      // Use AI agent to generate comment
+      const commentResponse = await runAgent(
+        getInstagramCommentSchema(),
+        `Craft a thoughtful, engaging, and mature reply to the following Instagram ${isReel ? 'reel' : 'post'}: "${caption}". 
+Ensure the reply is relevant, insightful, and adds value to the conversation. 
+It should reflect empathy and professionalism, and avoid sounding too casual or superficial. 
+The comment should be 300 characters or less and should not go against Instagram Community Standards on spam. 
+Make it sound natural and human-like. ${isReel ? 'Since this is a reel (video content), consider commenting on the visual content, creativity, or message conveyed.' : ''}
+
+IMPORTANT RULES:
+- NEVER include hashtags (#) in the comment
+- Do not use any hashtags whatsoever
+- Focus on genuine conversation, not promotional content
+- Write as a real person would comment, not as a marketer`
+      );
+
+      if (commentResponse && commentResponse.length > 0 && commentResponse[0].comment) {
+        generatedComment = commentResponse[0].comment.trim();
+        result.comment = generatedComment;
+      } else {
+        generatedComment = isReel ? 'Great content! 🎬' : 'Great post! 👍';
+        result.comment = generatedComment;
+      }
+
+      // Validate and clean the comment
       if (generatedComment.includes('#')) {
         logger.warn(`⚠️ Generated comment contained hashtags, removing them...`);
         logger.warn(`Original: "${generatedComment}"`);
         generatedComment = generatedComment.replace(/#\w+/g, '').replace(/\s+/g, ' ').trim();
+        result.comment = generatedComment;
         logger.warn(`Cleaned: "${generatedComment}"`);
         
         // Ensure comment is not empty after cleaning
         if (generatedComment.length < 10) {
           logger.warn(`⚠️ Comment too short after hashtag removal, using fallback`);
-          generatedComment = isReel ? 'Great content! 🎬' : 'Amazing post! 👍';
+          generatedComment = isReel ? 'Great content! 🎬' : 'Great post! 👍';
+          result.comment = generatedComment;
         }
       }
       
@@ -551,6 +575,7 @@ export async function interactWithProfile(page: Page, profileUrl: string): Promi
     } catch (error) {
       logger.warn('❌ Error generating potential comment:', error);
       generatedComment = isReel ? 'Great content! 🎬' : 'Great post! 👍';
+      result.comment = generatedComment;
     }
 
     // Show commenting status
@@ -628,17 +653,22 @@ export async function interactWithProfile(page: Page, profileUrl: string): Promi
             });
             await delay(getRandomWaitTime(config.settings.waitBetweenActions.min * 3, config.settings.waitBetweenActions.max * 3));
             logger.info(`✅ Comment posted successfully on ${isReel ? 'reel' : 'post'} at ${profileUrl}`);
+            result.commented = true;
           } else {
             logger.warn(`⚠️ Post button not found for ${isReel ? 'reel' : 'post'} on ${profileUrl}`);
+            result.commented = false;
           }
         } else {
           logger.warn(`⚠️ Comment box not found for ${isReel ? 'reel' : 'post'} on ${profileUrl}`);
+          result.commented = false;
         }
       } catch (error) {
         logger.warn(`❌ Error adding comment to ${isReel ? 'reel' : 'post'} on ${profileUrl}:`, error);
+        result.commented = false;
       }
     } else {
       logger.info('⏭️ Commenting is disabled in configuration, skipping comment action');
+      result.commented = false;
     }
 
     // Close the post/reel modal by pressing Escape
@@ -651,22 +681,50 @@ export async function interactWithProfile(page: Page, profileUrl: string): Promi
     logger.info(`🎉 Successfully processed ${isReel ? 'reel' : 'post'} from ${profileUrl}`);
     logger.info(`📊 Total posts interacted with on this profile: 1 (ONE)`);
     logger.info(`🎯 Strategy fulfilled: Found most relevant content and completed interaction`);
-    return true;
+    
+    result.success = true;
+    result.message = 'Successfully interacted with profile';
+    return result;
+
   } catch (error) {
     logger.error(`❌ Error interacting with profile ${profileUrl}:`, error);
-    return false;
+    result.message = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    return result;
   }
 }
 
-export async function interactWithProfiles(page: Page, profileUrls: string[]): Promise<void> {
+export async function interactWithProfiles(page: Page, profileUrls: string[], webhookParams?: any): Promise<InteractionResult[]> {
   logger.info('████████████████████████████████████████████████████████████████████████████████████');
   logger.info('██                      🚀 INSTAGRAM AI AGENT STARTED                            ██');
   logger.info('██                           MULTI-PROFILE INTERACTION                           ██');
   logger.info('████████████████████████████████████████████████████████████████████████████████████');
   logger.info(`🚀 Starting interaction with ${profileUrls.length} profiles`);
   
+  // Initialize results array
+  const results: InteractionResult[] = [];
+  
   // Load configuration for wait times
   const config = loadInteractionConfig();
+  
+  // Override configuration with webhook parameters if provided
+  if (webhookParams) {
+    if (webhookParams.enableLiking !== undefined) {
+      config.features.liking = webhookParams.enableLiking;
+      logger.info(`🔧 Webhook override: Liking = ${config.features.liking}`);
+    }
+    if (webhookParams.enableCommenting !== undefined) {
+      config.features.commenting = webhookParams.enableCommenting;
+      logger.info(`🔧 Webhook override: Commenting = ${config.features.commenting}`);
+    }
+    if (webhookParams.enableScreenshots !== undefined) {
+      config.features.screenshots = webhookParams.enableScreenshots;
+      logger.info(`🔧 Webhook override: Screenshots = ${config.features.screenshots}`);
+    }
+    if (webhookParams.enableContentFiltering !== undefined) {
+      config.features.contentFiltering = webhookParams.enableContentFiltering;
+      logger.info(`🔧 Webhook override: Content Filtering = ${config.features.contentFiltering}`);
+    }
+  }
   
   // Clean up old screenshots at the start
   await cleanupOldScreenshots();
@@ -681,12 +739,13 @@ export async function interactWithProfiles(page: Page, profileUrls: string[]): P
       logger.info('▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓');
       logger.info(`📋 Processing profile ${i + 1}/${profileUrls.length}: ${profileUrl}`);
       
-      const success = await interactWithProfile(page, profileUrl);
+      const result = await interactWithProfile(page, profileUrl, config);
+      results.push(result);
       
-      if (success) {
+      if (result.success) {
         logger.info(`✅ Successfully interacted with ${profileUrl}`);
       } else {
-        logger.warn(`⚠️ Failed to interact with ${profileUrl}`);
+        logger.warn(`⚠️ Failed to interact with ${profileUrl}: ${result.message}`);
       }
 
       // Wait between profiles to avoid being detected as spam
@@ -702,6 +761,15 @@ export async function interactWithProfiles(page: Page, profileUrls: string[]): P
       
     } catch (error) {
       logger.error(`❌ Error processing profile ${profileUrl}:`, error);
+      // Add error result to results array
+      results.push({
+        profileUrl,
+        success: false,
+        message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        liked: false,
+        commented: false,
+        isReel: false
+      });
       continue; // Continue with next profile
     }
   }
@@ -712,4 +780,6 @@ export async function interactWithProfiles(page: Page, profileUrls: string[]): P
   logger.info('██                          INSTAGRAM AI AGENT FINISHED                           ██');
   logger.info('████████████████████████████████████████████████████████████████████████████████████');
   logger.info('🎉 Completed interaction with all profiles');
+  
+  return results;
 }

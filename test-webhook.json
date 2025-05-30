@@ -1,11 +1,10 @@
 {
-  "test": "data",
-  "timestamp": "2025-05-28T10:17:00.000Z",
-  "profileUrl": "https://www.instagram.com/test/",
-  "username": "test",
-  "filename": "profile_test_2025-05-28T10-17-00-000Z.jpg",
-  "image": {
-    "type": "image/jpeg"
-  },
-  "message": "Testing webhook functionality with JPG format"
+  "profileUrl": "https://www.instagram.com/test_profile/",
+  "username": "test_profile",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "message": "Testing webhook with detailed response after processing completion",
+  "enableLiking": true,
+  "enableCommenting": true,
+  "enableScreenshots": true,
+  "enableContentFiltering": true
 } 

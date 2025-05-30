@@ -1,7 +1,7 @@
 {
   "features": {
     "liking": true,
-    "commenting": true,
+    "commenting": false,
     "screenshots": false,
     "contentFiltering": true
   },
